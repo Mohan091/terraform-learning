@@ -38,4 +38,5 @@ terraform.rc
 
 # Ignore Terraform lock files 
 .terraform.lock.hcl
-.*
+*.lock 
+*.hcl 
