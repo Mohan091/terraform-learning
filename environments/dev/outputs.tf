@@ -17,3 +17,27 @@ output "nat_gw" {
 output "eip" {
   value = module.vpc.eip
 }
+
+########################################### EKS Cluster Output #########################################
+
+output "cluster_name" {
+  value = module.eks.cluster_name
+}
+output "eks_cluster_version" {
+  value = module.eks.eks_cluster_version
+}
+output "launch_template_name" {
+  value = module.eks.launch_template_name
+}
+output "node_group_name" {
+  value = module.eks.node_group_name
+}
+output "nodegroup_role" {
+  value = module.eks.nodegroup_role
+}
+output "eks_cluster_role" {
+  value = module.eks.eks_cluster_role
+}
+output "asg_name" {
+  value = module.eks.asg_name
+}
