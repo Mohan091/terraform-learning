@@ -37,7 +37,38 @@ variable "tags" {
     Created_By = "Mohan Mouyra"
   }
 }
-# variable "nat_gw" {
-#   description = "NAT GW ID"
-#   type = string 
-# }
+
+######################### EKS Cluster Variables ###########################################
+
+variable "cluster_sg_name" {
+  type        = string
+  description = "EKS Cluster SG Name"
+}
+variable "cluster_name" {
+  type        = string
+  description = "EKS Cluster name"
+}
+variable "launch_template_name" {
+  type        = string
+  description = "Launch template name"
+}
+variable "cluster_role_name" {
+  type        = string
+  description = "EKS Cluster role name"
+}
+variable "cluster_policy_name" {
+  type        = string
+  description = "EKS cluster policy name"
+}
+variable "nodegroup_role_name" {
+  type        = string
+  description = "Nodegroup role name"
+}
+variable "asg_name" {
+  type        = string
+  description = "ASG name"
+}
+variable "ssm_role" {
+  type        = string
+  description = "EC2 SSM Role"
+}

@@ -1,23 +1,69 @@
 resource "aws_security_group" "eks-sg" {
-  name = "${terraform.workspace}-eks-cluster-sg"
+  name   = "${terraform.workspace}-${var.cluster_sg_name}"
   vpc_id = module.vpc.vpc_id
-  ingress = [
-    {
-        from_port = "80"
-        to_port = "80"
-        protocol = "tcp"
-        self = true
-    },
-    {
-        from_port = "443"
-        to_port = "443"
-        protocol = "tcp"
-        self = true
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTP from internet"
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTPS from internet"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+}
+
+data "aws_iam_policy_document" "eks_assume_role" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["eks.amazonaws.com"]
     }
-  ]
+
+    actions = ["sts:AssumeRole"]
+  }
+}
+
+resource "aws_iam_role" "eks_role" {
+  assume_role_policy = data.aws_iam_policy_document.eks_assume_role.json
+  name               = "${terraform.workspace}-eks-cluster-role"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cluster" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role     = aws_iam_role.eks_role.name
 }
 
 module "eks" {
-    source  = "terraform-aws-modules/eks/aws"
-    version = "~> 21.0"
+  source                                   = "terraform-aws-modules/eks/aws"
+  version                                  = "~> 21.0"
+  name                                     = "${terraform.workspace}-${var.cluster_name}"
+  kubernetes_version                       = "1.31"
+  endpoint_public_access                   = true
+  enable_cluster_creator_admin_permissions = true
+  vpc_id                                   = "vpc-09e87ebdd907f8fea"  #module.vpc.output.vpc_id
+  subnet_ids                               = ["subnet-04cadadffdbfeaa4b"] #module.vpc.resource.public_subnets.id
+  security_group_id                        = aws_security_group.eks-sg.id
+  addons = {
+    coredns               = {}
+    kube-proxy            = {}
+    amazon_vpc_cni        = {}
+    amazon_ebs_csi_driver = {}
+  }
 }
