@@ -21,11 +21,6 @@ resource "aws_iam_role_policy_attachment" "worker_CNI" {
   role       = aws_iam_role.nodegroup_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "worker_node" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.nodegroup_role.name
-}
-
 resource "aws_iam_role_policy_attachment" "ECR_registry" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.nodegroup_role.name
@@ -36,11 +31,16 @@ resource "aws_iam_role_policy_attachment" "nodegroup_ssm" {
   role       = aws_iam_role.nodegroup_role.name
 }
 
+resource "aws_iam_role_policy_attachment" "nodegroup_workernode" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.nodegroup_role.name
+}
+
 resource "aws_eks_node_group" "eks_nodegroup" {
-  node_group_name = "${terraform.workspace}-nodegorup"
-  cluster_name    = var.cluster_name
+  node_group_name = "${terraform.workspace}-nodegroup"
+  cluster_name    = module.eks.cluster_name
   node_role_arn   = aws_iam_role.nodegroup_role.arn
-  subnet_ids      = module.vpc.subnet_ids
+  subnet_ids      = ["subnet-0f764db305c5e677d","subnet-0059910fbcc450a69","subnet-042f9a30c03bb3bbd"]   #module.vpc.subnet_ids
   scaling_config {
     min_size     = "0"
     max_size     = "3"
@@ -52,7 +52,7 @@ resource "aws_eks_node_group" "eks_nodegroup" {
   }
   depends_on = [
     aws_iam_role_policy_attachment.worker_CNI,
-    aws_iam_role_policy_attachment.worker_node,
+    aws_iam_role_policy_attachment.nodegroup_workernode,
     aws_iam_role_policy_attachment.ECR_registry,
     aws_iam_role_policy_attachment.nodegroup_ssm
   ]
