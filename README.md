@@ -1,2 +1,7 @@
 # terraform-learning
 Repository for leanring purpose of Terraform
+
+
+creds="REMOVED_SECRET"
+password="REMOVED_PASSWORD"
+
