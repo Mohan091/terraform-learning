@@ -59,8 +59,6 @@ jobs:
           BASE=${{ steps.pr_info.outputs.base }}
           HEAD=${{ steps.pr_info.outputs.head }}
 
-          echo "# Release $TAG" > RELEASE_NOTES.md
-          echo "" >> RELEASE_NOTES.md
           echo "## What's Changed" >> RELEASE_NOTES.md
 
           # List merged PRs with author + number
@@ -72,13 +70,13 @@ jobs:
             >> RELEASE_NOTES.md
 
           echo "" >> RELEASE_NOTES.md
-          echo "## Full Changelog" >> RELEASE_NOTES.md
-          echo "[Compare Changes](https://github.com/${{ github.repository }}/compare/$PREV...$TAG)" >> RELEASE_NOTES.md
+
+          echo "Full Changelog: (https://github.com/${{ github.repository }}/compare/$PREV...$TAG)" >> RELEASE_NOTES.md
 
           echo "" >> RELEASE_NOTES.md
           echo "## Contributors" >> RELEASE_NOTES.md
           gh pr list \
-            --state merged \
+            --state merged && open \
             --base "$BASE" \
             --json author \
             --jq '.[].author.login' | sort -u | sed 's/^/- @/' >> RELEASE_NOTES.md
