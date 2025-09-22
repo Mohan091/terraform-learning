@@ -58,29 +58,21 @@ jobs:
 
       - name: Generate Release Notes
         run: |
-          TAG=${{ steps.new_tag.outputs.new_tag }}
           PREV=${{ steps.prev_release.outputs.prev_tag }}
-          BASE=${{ steps.pr_info.outputs.base }}
+          TAG=${{ steps.new_tag.outputs.new_tag }}
 
-
-          echo "## What's Changed" >> RELEASE_NOTES.md
-
-          # List merged PRs with author + number
-          git log $PREV..HEAD --merges --pretty=format:"%s" | \
-            sed -E 's/Merge pull request #([0-9]+) from .*/\1/' | \
-            while read pr; do
-              if [ -n "$pr" ]; then
-                gh pr view $pr --json title,author,number \
-                  --jq '". \(.title) by @\(.author.login) in #\(.number)"' \
-                  >> RELEASE_NOTES.md
-              fi
-            done
+          echo "## What's Changed" > RELEASE_NOTES.md
+          # Get merged PRs between PREV tag and HEAD
+          gh pr list \
+            --state merged \
+            --search "merged:>=$(git log -1 --format=%cd $PREV).." \
+            --json number,title,author,mergedAt \
+            --jq '.[] | "- \(.title) by @\(.author.login) in #\(.number)"' \
+            >> RELEASE_NOTES.md
 
           echo "" >> RELEASE_NOTES.md
-
           echo "Full Changelog: https://github.com/${{ github.repository }}/compare/$PREV...$TAG" >> RELEASE_NOTES.md
 
-          echo "" >> RELEASE_NOTES.md
           echo "Final release notes:" && cat RELEASE_NOTES.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
