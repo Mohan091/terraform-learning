@@ -62,13 +62,19 @@ jobs:
           TAG=${{ steps.new_tag.outputs.new_tag }}
 
           echo "## What's Changed" > RELEASE_NOTES.md
-          # Get merged PRs between PREV tag and HEAD
-          gh pr list \
-            --state merged \
-            --search "merged:>=$(git log -1 --format=%cd $PREV).." \
-            --json number,title,author,mergedAt \
-            --jq '.[] | "- \(.title) by @\(.author.login) in #\(.number)"' \
-            >> RELEASE_NOTES.md
+          # Fetch tags and ensure all commits are available
+          git fetch --tags
+
+          # Get merge commits between previous tag and HEAD
+          git log $PREV..HEAD --merges --pretty=format:"%s" | \
+            sed -nE 's/Merge pull request #([0-9]+) from .*/\1/p' | \
+            while read pr; do
+              if [ -n "$pr" ]; then
+                gh pr view $pr --json title,author,number \
+                  --jq '"- \(.title) by @\(.author.login) in #\(.number)"' \
+                  >> RELEASE_NOTES.md
+              fi
+            done
 
           echo "" >> RELEASE_NOTES.md
           echo "Full Changelog: https://github.com/${{ github.repository }}/compare/$PREV...$TAG" >> RELEASE_NOTES.md
