@@ -17,9 +17,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install GitHub CLI
-        uses: cli/cli-action@v2
-
       - name: Get PR base and head
         id: pr_info
         run: |
