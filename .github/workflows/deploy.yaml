@@ -1,3 +1,8 @@
+permissions:
+  contents: write
+  pull-requests: read
+  issues: read
+
 name: Create tag and release before promotion ot QA
 
 on:
