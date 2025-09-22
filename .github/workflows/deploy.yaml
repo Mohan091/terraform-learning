@@ -1,4 +1,4 @@
-name: Promote to QA
+name: Create tag and release before promotion ot QA
 
 on:
   issue_comment:
@@ -8,7 +8,7 @@ jobs:
   promote-to-qa:
     if: |
       github.event.issue.pull_request &&
-      startsWith(github.event.comment.body, '/promote qa')
+      startsWith(github.event.comment.body, '/tag qa')
     runs-on: ubuntu-latest
 
     steps:
@@ -25,6 +25,7 @@ jobs:
           echo "base=$BASE_BRANCH" >> $GITHUB_OUTPUT
           echo "head=$HEAD_BRANCH" >> $GITHUB_OUTPUT
 
+      # ✅ Step 1: Get the latest release tag
       - name: Get latest release tag
         id: prev_release
         run: |
@@ -33,6 +34,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # ✅ Step 2: Generate a new tag version
+      - name: Create new tag
+        id: new_tag
+        run: |
+          DATE_TAG="v$(date +'%Y.%m.%d').${{ github.run_number }}"
+          echo "new_tag=$DATE_TAG" >> $GITHUB_OUTPUT
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag $DATE_TAG
+          git push origin $DATE_TAG
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ✅ Step 3: Generate PR summary
       - name: Generate PR summary section
         run: |
           echo "## Merged Pull Requests" > CHANGELOG.md
@@ -46,33 +61,36 @@ jobs:
             >> CHANGELOG.md
 
           echo "" >> CHANGELOG.md
-
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate full changelog (commits since last release)
+      # ✅ Step 4: Generate full changelog (commits since last release)
+      - name: Generate full changelog (commit log)
         run: |
           echo "## Full Changelog" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
 
           BASE=${{ steps.prev_release.outputs.prev_tag }}
-          HEAD=${{ steps.pr_info.outputs.head }}
+          NEW=${{ steps.new_tag.outputs.new_tag }}
 
-          git fetch origin $BASE $HEAD
-          git log $BASE..origin/$HEAD --pretty=format:"* %s (%h) by %an" >> CHANGELOG.md
+          git fetch origin $BASE $NEW
+          git log $BASE..$NEW --pretty=format:"* %s (%h) by %an" >> CHANGELOG.md
 
           echo "" >> CHANGELOG.md
           echo "Final CHANGELOG.md:"
           cat CHANGELOG.md
 
-      - name: Update GitHub Release
+      # ✅ Step 5: Create a new release for the new tag
+      - name: Create GitHub Release
         run: |
-          TAG=${{ steps.prev_release.outputs.prev_tag }}
-          gh release edit $TAG --notes-file CHANGELOG.md
+          gh release create ${{ steps.new_tag.outputs.new_tag }} \
+            --title "Release ${{ steps.new_tag.outputs.new_tag }}" \
+            --notes-file CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # ✅ Step 6: Deploy to QA
       - name: Deploy to QA
         run: |
-          echo "Deploying release ${{ steps.prev_release.outputs.prev_tag }} to QA..."
-          # your deployment steps here
+          echo "Deploying release ${{ steps.new_tag.outputs.new_tag }} to QA..."
+          # your deployment commands here
