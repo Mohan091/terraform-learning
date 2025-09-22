@@ -1,8 +1,9 @@
 permissions:
-  contents: write   # needed for tagging + release
+  contents: write
   pull-requests: read
+  issues: read
 
-name: Promote to QA
+name: Create tag and release before promotion ot QA
 
 on:
   issue_comment:
@@ -10,7 +11,9 @@ on:
 
 jobs:
   promote-to-qa:
-    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/promote qa')
+    if: |
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/tag qa')
     runs-on: ubuntu-latest
 
     steps:
