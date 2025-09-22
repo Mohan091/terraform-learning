@@ -66,20 +66,16 @@ jobs:
             --state merged \
             --base "$BASE" \
             --json number,title,author \
-            --jq '.[] | "\(.title) by @\(.author.login) in #\(.number)"' \
+            --jq '.[] | ". \(.title) by @\(.author.login) in #\(.number)"' \
             >> RELEASE_NOTES.md
 
           echo "" >> RELEASE_NOTES.md
 
-          echo "Full Changelog: (https://github.com/${{ github.repository }}/compare/$PREV...$TAG)" >> RELEASE_NOTES.md
+          echo "Full Changelog: https://github.com/${{ github.repository }}/compare/$PREV...$TAG" >> RELEASE_NOTES.md
 
           echo "" >> RELEASE_NOTES.md
           echo "## Contributors" >> RELEASE_NOTES.md
-          gh pr list \
-            --state merged && open \
-            --base "$BASE" \
-            --json author \
-            --jq '.[].author.login' | sort -u | sed 's/^/- @/' >> RELEASE_NOTES.md
+          echo "- @${{ github.actor }}" >> RELEASE_NOTES.md
 
           echo "" >> RELEASE_NOTES.md
           echo "Final release notes:" && cat RELEASE_NOTES.md
