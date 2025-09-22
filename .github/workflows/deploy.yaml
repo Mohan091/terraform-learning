@@ -63,20 +63,16 @@ jobs:
           BASE=${{ steps.pr_info.outputs.base }}
 
           echo "## What's Changed" > RELEASE_NOTES.md
-          # Fetch all commits and tags
-          git fetch --tags --prune
-
-          # Get commits between PREV tag and HEAD
-          git log $PREV_TAG..HEAD --pretty=format:"%s" | \
-          while read commit; do
-            # Extract PR number from commit message e.g., "Some change (#123)"
-            PR=$(echo "$commit" | grep -oE '\(#([0-9]+)\)' | grep -oE '[0-9]+')
-            if [ -n "$PR" ]; then
-              gh pr view $PR --json title,author,number \
-                --jq '". \(.title) by @\(.author.login) in #\(.number)"' \
-                >> RELEASE_NOTES.md
-            fi
-          done
+          # Get the commit date of previous tag
+          PREV_DATE=$(git log -1 --format=%cI $PREV)
+          # List merged PRs since previous tag
+          gh pr list \
+            --state merged \
+            --base main \
+            --search "merged:>=$PREV_DATE" \
+            --json number,title,author \
+            --jq '.[] | ". \(.title) by @\(.author.login) in #\(.number)"' \
+            >> RELEASE_NOTES.md
 
           echo "" >> RELEASE_NOTES.md
           echo "Full Changelog: https://github.com/${{ github.repository }}/compare/$PREV...$TAG" >> RELEASE_NOTES.md
