@@ -1,12 +1,12 @@
+permissions:
+  contents: write   # needed for tagging + release
+  pull-requests: read
+
 name: Promote to QA
 
 on:
   issue_comment:
     types: [created]
-
-permissions:
-  contents: write   # needed for tagging + release
-  pull-requests: read
 
 jobs:
   promote-to-qa:
