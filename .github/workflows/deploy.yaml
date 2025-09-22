@@ -58,24 +58,18 @@ jobs:
 
       - name: Generate Release Notes
         run: |
+          PREV_DATE=$(git show -s --format=%cI $PREV_TAG)
+          HEAD_DATE=$(git show -s --format=%cI HEAD)
           PREV=${{ steps.prev_release.outputs.prev_tag }}
           TAG=${{ steps.new_tag.outputs.new_tag }}
           BASE=${{ steps.pr_info.outputs.base }}
 
           echo "## What's Changed" > RELEASE_NOTES.md
-          git fetch --tags --prune
-
-          # Get all commits between previous tag and HEAD
-          git log $PREV_TAG..HEAD --pretty=format:"%s" | \
-          while read commit; do
-            # Extract PR number in any common GitHub merge format
-            PR=$(echo "$commit" | grep -oE '\(#([0-9]+)\)' | grep -oE '[0-9]+')
-            if [ -n "$PR" ]; then
-              gh pr view $PR --json title,author,number \
-                --jq '"- \(.title) by @\(.author.login) in #\(.number)"' \
-                >> RELEASE_NOTES.md
-            fi
-          done
+          # List all merged PRs
+          gh pr list --state merged --base main --json number,title,author,mergedAt --limit 1000 | \
+          jq -r --arg start "$PREV_DATE" --arg end "$HEAD_DATE" '
+            .[] | select(.mergedAt >= $start and .mergedAt <= $end) | ". \(.title) by @\(.author.login) in #\(.number)"' \
+            >> RELEASE_NOTES.md
 
           echo "" >> RELEASE_NOTES.md
           echo "Full Changelog: https://github.com/${{ github.repository }}/compare/$PREV...$TAG" >> RELEASE_NOTES.md
