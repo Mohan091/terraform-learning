@@ -1,0 +1,81 @@
+name: Promote to QA
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  promote-to-qa:
+    if: |
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/promote qa')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install GitHub CLI
+        uses: cli/cli-action@v2
+
+      - name: Get PR base and head
+        id: pr_info
+        run: |
+          BASE_BRANCH=$(jq -r .pull_request.base.ref < $GITHUB_EVENT_PATH)
+          HEAD_BRANCH=$(jq -r .pull_request.head.ref < $GITHUB_EVENT_PATH)
+          echo "base=$BASE_BRANCH" >> $GITHUB_OUTPUT
+          echo "head=$HEAD_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Get latest release tag
+        id: prev_release
+        run: |
+          PREV_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate PR summary section
+        run: |
+          echo "## Merged Pull Requests" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+
+          gh pr list \
+            --state merged \
+            --base ${{ steps.pr_info.outputs.base }} \
+            --json number,title,author \
+            --jq '.[] | "- PR #\(.number): \(.title) by @\(.author.login)"' \
+            >> CHANGELOG.md
+
+          echo "" >> CHANGELOG.md
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate full changelog (commits since last release)
+        run: |
+          echo "## Full Changelog" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+
+          BASE=${{ steps.prev_release.outputs.prev_tag }}
+          HEAD=${{ steps.pr_info.outputs.head }}
+
+          git fetch origin $BASE $HEAD
+          git log $BASE..origin/$HEAD --pretty=format:"* %s (%h) by %an" >> CHANGELOG.md
+
+          echo "" >> CHANGELOG.md
+          echo "Final CHANGELOG.md:"
+          cat CHANGELOG.md
+
+      - name: Update GitHub Release
+        run: |
+          TAG=${{ steps.prev_release.outputs.prev_tag }}
+          gh release edit $TAG --notes-file CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to QA
+        run: |
+          echo "Deploying release ${{ steps.prev_release.outputs.prev_tag }} to QA..."
+          # your deployment steps here
