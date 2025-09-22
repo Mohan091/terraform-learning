@@ -75,8 +75,6 @@ jobs:
 
           echo "" >> RELEASE_NOTES.md
 
-          echo "- @${{ github.actor }}" >> RELEASE_NOTES.md
-
           echo "" >> RELEASE_NOTES.md
           echo "Final release notes:" && cat RELEASE_NOTES.md
         env:
