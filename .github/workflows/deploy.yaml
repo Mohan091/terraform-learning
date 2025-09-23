@@ -90,7 +90,7 @@ jobs:
           fi
 
           echo "" >> RELEASE_NOTES.md
-          echo "Full Changelog: https://github.com/${{ github.repository }}/compare/$PREV...$TAG" >> RELEASE_NOTES.md
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV...$TAG" >> RELEASE_NOTES.md
 
           echo "Final release notes:" && cat RELEASE_NOTES.md
         env:
