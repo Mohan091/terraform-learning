@@ -72,12 +72,22 @@ jobs:
 
           echo "## What's Changed" > RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
-          gh pr list \
-            --state merged \
-            --base ${{ steps.pr_info.outputs.base }} \
-            --json number,title,author \
-            --jq '.[] | ". \(.title) by @\(.author.login) in #\(.number)"' \
-            >> RELEASE_NOTES.md
+
+          git fetch --tags
+
+          # Get merged PR numbers between PREV and TAG
+          git log $PREV..HEAD --merges --pretty=format:"%s" | \
+            sed -nE 's/Merge pull request #([0-9]+).*/\1/p' | sort -u > prs.txt
+
+          if [ -s prs.txt ]; then
+            while read pr; do
+              gh pr view $pr --json number,title,author \
+                --jq '"- \(.title) by @\(.author.login) in #\(.number)"' \
+                >> RELEASE_NOTES.md
+            done < prs.txt
+          else
+            echo "- No PRs merged since $PREV" >> RELEASE_NOTES.md
+          fi
 
           echo "" >> RELEASE_NOTES.md
           echo "Full Changelog: https://github.com/${{ github.repository }}/compare/$PREV...$TAG" >> RELEASE_NOTES.md
