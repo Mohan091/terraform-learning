@@ -82,7 +82,7 @@ jobs:
           if [ -s prs.txt ]; then
             while read pr; do
               gh pr view $pr --json number,title,author \
-                --jq '". \(.title) by @\(.author.login) in #\(.number)"' \
+                --jq '"- \(.title) by @\(.author.login) in #\(.number)"' \
                 >> RELEASE_NOTES.md
             done < prs.txt
           else
