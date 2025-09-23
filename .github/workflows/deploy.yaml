@@ -58,17 +58,17 @@ jobs:
 
       - name: Generate Release Notes
         run: |
-          PREV_DATE=$(git show -s --format=%cI $PREV_TAG)
-          HEAD_DATE=$(git show -s --format=%cI HEAD)
           PREV=${{ steps.prev_release.outputs.prev_tag }}
           TAG=${{ steps.new_tag.outputs.new_tag }}
           BASE=${{ steps.pr_info.outputs.base }}
 
           echo "## What's Changed" > RELEASE_NOTES.md
-          # List all merged PRs
-          gh pr list --state all --base main --json number,title,author,mergedAt --limit 1000 | \
-          jq -r --arg start "$PREV_DATE" --arg end "$HEAD_DATE" '
-            .[] | select(.mergedAt >= $start and .mergedAt <= $end) | ". \(.title) by @\(.author.login) in #\(.number)"' \
+          echo "" >> RELEASE_NOTES.md
+          gh pr list \
+            --state merged \
+            --base ${{ steps.pr_info.outputs.base }} \
+            --json number,title,author \
+            --jq '.[] | ". \(.title) by @\(.author.login) in #\(.number)"' \
             >> RELEASE_NOTES.md
 
           echo "" >> RELEASE_NOTES.md
