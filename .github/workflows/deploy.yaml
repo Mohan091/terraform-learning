@@ -28,7 +28,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: {{ steps.pr_info.outputs.base }}
+          ref: ${{ steps.pr_info.outputs.base }}
           fetch-depth: 0
 
       - name: Parse Tag Name from comment
