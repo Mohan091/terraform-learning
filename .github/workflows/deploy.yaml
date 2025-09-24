@@ -20,8 +20,13 @@ jobs:
       - name: Get PR info
         id: pr_info
         run: |
-          BASE_BRANCH=$(jq -r .pull_request.base.ref < $GITHUB_EVENT_PATH)
-          HEAD_BRANCH=$(jq -r .pull_request.head.ref < $GITHUB_EVENT_PATH)
+          if jq -e .pull_request $GITHUB_EVENT_PATH > /dev/null; then
+            BASE_BRANCH=$(jq -r .pull_request.base.ref < $GITHUB_EVENT_PATH)
+            HEAD_BRANCH=$(jq -r .pull_request.head.ref < $GITHUB_EVENT_PATH)
+          else
+            BASE_BRANCH=$(jq -r .repository.default_branch < $GITHUB_EVENT_PATH)
+            HEAD_BRANCH=$BASE_BRANCH
+          fi
           echo "base=$BASE_BRANCH" >> $GITHUB_OUTPUT
           echo "head=$HEAD_BRANCH" >> $GITHUB_OUTPUT
 
