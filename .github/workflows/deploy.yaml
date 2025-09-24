@@ -30,6 +30,9 @@ jobs:
           echo "base=$BASE_BRANCH" >> $GITHUB_OUTPUT
           echo "head=$HEAD_BRANCH" >> $GITHUB_OUTPUT
 
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
