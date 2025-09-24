@@ -17,9 +17,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Get PR info
+        id: pr_info
+        run: |
+          BASE_BRANCH=$(jq -r .pull_request.base.ref < $GITHUB_EVENT_PATH)
+          HEAD_BRANCH=$(jq -r .pull_request.head.ref < $GITHUB_EVENT_PATH)
+          echo "base=$BASE_BRANCH" >> $GITHUB_OUTPUT
+          echo "head=$HEAD_BRANCH" >> $GITHUB_OUTPUT
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: {{ steps.pr_info.outputs.base }}
           fetch-depth: 0
 
       - name: Parse Tag Name from comment
@@ -29,14 +38,6 @@ jobs:
           tagname=$(echo "$comment" | awk '{print $2}')
           echo "tagname=$tagname" >> $GITHUB_OUTPUT
           echo "tagname=$tagname" >> $GITHUB_ENV    
-
-      - name: Get PR info
-        id: pr_info
-        run: |
-          BASE_BRANCH=$(jq -r .pull_request.base.ref < $GITHUB_EVENT_PATH)
-          HEAD_BRANCH=$(jq -r .pull_request.head.ref < $GITHUB_EVENT_PATH)
-          echo "base=$BASE_BRANCH" >> $GITHUB_OUTPUT
-          echo "head=$HEAD_BRANCH" >> $GITHUB_OUTPUT
 
       - name: Get latest release tag
         id: prev_release
