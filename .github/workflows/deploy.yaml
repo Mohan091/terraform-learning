@@ -39,7 +39,7 @@ jobs:
           echo "pr_title=$pr_title" >> $GITHUB_ENV
           echo "pr_title=$pr_title" >> $GITHUB_OUTPUT
           echo "pr_commit=$pr_commit" >> $GITHUB_OUTPUT
-          echo "pr_commit=$pr_commit" >> #GITHUB_ENV
+          echo "pr_commit=$pr_commit" >> $GITHUB_ENV
 
       - name: Checkout main branch code
         uses: actions/checkout@v4
