@@ -25,7 +25,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract PR Source branch
+      - name: Extract PR details
         id: prbranch
         run: |
           source_pr_branch="${{ fromJson(steps.prdetails.outputs.data).head.ref }}"
@@ -33,19 +33,15 @@ jobs:
           pr_commit="${{ fromJson(steps.prdetails.outputs.data).head.sha }}"
           pr_title="${{ fromJson(steps.prdetails.outputs.data).title }}"
           echo "source_pr_branch=$source_pr_branch" >> $GITHUB_ENV
-          echo "source_pr_branch=$source_pr_branch" >> $GITHUB_OUTPUT
           echo "target_pr_branch=$target_pr_branch" >> $GITHUB_ENV
-          echo "target_pr_branch=$target_pr_branch" >> $GITHUB_OUTPUT
           echo "pr_title=$pr_title" >> $GITHUB_ENV
-          echo "pr_title=$pr_title" >> $GITHUB_OUTPUT
-          echo "pr_commit=$pr_commit" >> $GITHUB_OUTPUT
           echo "pr_commit=$pr_commit" >> $GITHUB_ENV
+          echo "pr_commit=$pr_commit" >> $GITHUB_OUTPUT
 
-      - name: Checkout main branch code
+      - name: Checkout repo (full history for tags)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.repository.target_pr_branch }}
 
       - name: Parse Tag Name from comment
         id: tag
@@ -54,14 +50,6 @@ jobs:
           tagname=$(echo "$comment" | awk '{print $2}')
           echo "tagname=$tagname" >> $GITHUB_OUTPUT
           echo "tagname=$tagname" >> $GITHUB_ENV    
-
-      # - name: Get PR info
-      #   id: pr_info
-      #   run: |
-      #     BASE_BRANCH=$(jq -r .pull_request.base.ref < $GITHUB_EVENT_PATH)
-      #     HEAD_BRANCH=$(jq -r .pull_request.head.ref < $GITHUB_EVENT_PATH)
-      #     echo "base=$BASE_BRANCH" >> $GITHUB_OUTPUT
-      #     echo "head=$HEAD_BRANCH" >> $GITHUB_OUTPUT
 
       - name: Get latest release tag
         id: prev_release
@@ -75,53 +63,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create new tag
-        id: new_tag
-        run: |
-          TAG="${{ steps.tag.outputs.tagname }}"
-          echo "new_tag=$TAG" >> $GITHUB_OUTPUT
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git tag $TAG
-          git push origin $TAG
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Generate Release Notes
         run: |
           PREV=${{ steps.prev_release.outputs.prev_tag }}
-          TAG=${{ steps.tag.outputs.tagname }}
-          BASE=${{ steps.pr_info.outputs.base }}
+          NEW=${{ steps.tag.outputs.tagname }}
+          SHA=${{ steps.prbranch.outputs.pr_commit }}
 
           echo "## What's Changed" > RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
 
-          git fetch --tags
-
-          # Get merged PR numbers between PREV and TAG
-          git log $PREV..HEAD --merges --pretty=format:"%s" | \
-            sed -nE 's/Merge pull request #([0-9]+).*/\1/p' | sort -u > prs.txt
-
-          if [ -s prs.txt ]; then
-            while read pr; do
-              gh pr view $pr --json number,title,author \
-                --jq '"- \(.title) by @\(.author.login) in #\(.number)"' \
-                >> RELEASE_NOTES.md
-            done < prs.txt
-          else
-            echo "- No PRs merged since $PREV Tag" >> RELEASE_NOTES.md
-          fi
+          # Collect commits between previous tag and PR commit
+          git log $PREV..$SHA --pretty=format:"- %s by %an" >> RELEASE_NOTES.md
 
           echo "" >> RELEASE_NOTES.md
-          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV...$TAG" >> RELEASE_NOTES.md
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV...$NEW" >> RELEASE_NOTES.md
 
           echo "Final release notes:" && cat RELEASE_NOTES.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release (auto-creates tag)
         run: |
           gh release create ${{ steps.tag.outputs.tagname }} \
             --title "${{ steps.tag.outputs.tagname }}" \
