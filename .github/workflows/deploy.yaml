@@ -3,7 +3,7 @@ permissions:
   pull-requests: read
   issues: read
 
-name: Create tag and release before promotion ot QA
+name: Create tag and release before promotion to QA/UAT
 
 on:
   issue_comment:
@@ -17,6 +17,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Get PR details
+        id: prdetails
+        uses: octokit/request-action@v2.x
+        with:
+          route: GET /repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract PR Source branch
+        id: prbranch
+        run: |
+          source_pr_branch="${{ fromJson(steps.prdetails.outputs.data).head.ref }}"
+          target_pr_branch="${{ fromJson(steps.prdetails.outputs.data).base.ref }}"
+          pr_title="${{ fromJson(steps.prdetails.outputs.data).title }}"
+          echo "source_pr_branch=$source_pr_branch" >> $GITHUB_ENV
+          echo "source_pr_branch=$source_pr_branch" >> $GITHUB_OUTPUT
+          echo "target_pr_branch=$target_pr_branch" >> $GITHUB_ENV
+          echo "target_pr_branch=$target_pr_branch" >> $GITHUB_OUTPUT
+          echo "pr_title=$pr_title" >> $GITHUB_ENV
+          echo "pr_title=$pr_title" >> $GITHUB_OUTPUT
+
+      - name: Checkout main branch code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.repository.target_pr_branch }}
+
       - name: Parse Tag Name from comment
         id: tag
         run: |
@@ -24,6 +51,14 @@ jobs:
           tagname=$(echo "$comment" | awk '{print $2}')
           echo "tagname=$tagname" >> $GITHUB_OUTPUT
           echo "tagname=$tagname" >> $GITHUB_ENV    
+
+      # - name: Get PR info
+      #   id: pr_info
+      #   run: |
+      #     BASE_BRANCH=$(jq -r .pull_request.base.ref < $GITHUB_EVENT_PATH)
+      #     HEAD_BRANCH=$(jq -r .pull_request.head.ref < $GITHUB_EVENT_PATH)
+      #     echo "base=$BASE_BRANCH" >> $GITHUB_OUTPUT
+      #     echo "head=$HEAD_BRANCH" >> $GITHUB_OUTPUT
 
       - name: Get latest release tag
         id: prev_release
@@ -73,7 +108,7 @@ jobs:
                 >> RELEASE_NOTES.md
             done < prs.txt
           else
-            echo "- No PRs merged since $PREV" >> RELEASE_NOTES.md
+            echo "- No PRs merged since $PREV Tag" >> RELEASE_NOTES.md
           fi
 
           echo "" >> RELEASE_NOTES.md
@@ -90,7 +125,3 @@ jobs:
             --notes-file RELEASE_NOTES.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Ready for QA Promotion
-        run: |
-          echo "Now the ${{ steps.new_tag.outputs.new_tag }} is ready to promotte on QA/UAT..."
