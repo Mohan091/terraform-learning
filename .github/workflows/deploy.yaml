@@ -17,28 +17,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get PR info
-        id: pr_info
-        run: |
-          PR_NUMBER=$(jq -r .issue.number < $GITHUB_EVENT_PATH)
-
-          echo "Fetching PR #$PR_NUMBER info..."
-          PR_DATA=$(gh pr view $PR_NUMBER --json baseRefName,headRefName)
-          BASE_BRANCH=$(echo "$PR_DATA" | jq -r .baseRefName)
-          HEAD_BRANCH=$(echo "$PR_DATA" | jq -r .headRefName)
-
-          echo "base=$BASE_BRANCH" >> $GITHUB_OUTPUT
-          echo "head=$HEAD_BRANCH" >> $GITHUB_OUTPUT
-
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.pr_info.outputs.base }}
-          fetch-depth: 0
-
       - name: Parse Tag Name from comment
         id: tag
         run: |
