@@ -30,6 +30,7 @@ jobs:
         run: |
           source_pr_branch="${{ fromJson(steps.prdetails.outputs.data).head.ref }}"
           target_pr_branch="${{ fromJson(steps.prdetails.outputs.data).base.ref }}"
+          pr_commit="${{ fromJson(steps.prdetails.outputs.data).head.sha }}"
           pr_title="${{ fromJson(steps.prdetails.outputs.data).title }}"
           echo "source_pr_branch=$source_pr_branch" >> $GITHUB_ENV
           echo "source_pr_branch=$source_pr_branch" >> $GITHUB_OUTPUT
@@ -37,6 +38,8 @@ jobs:
           echo "target_pr_branch=$target_pr_branch" >> $GITHUB_OUTPUT
           echo "pr_title=$pr_title" >> $GITHUB_ENV
           echo "pr_title=$pr_title" >> $GITHUB_OUTPUT
+          echo "pr_commit=$pr_commit" >> $GITHUB_OUTPUT
+          echo "pr_commit=$pr_commit" >> #GITHUB_ENV
 
       - name: Checkout main branch code
         uses: actions/checkout@v4
@@ -122,7 +125,7 @@ jobs:
         run: |
           gh release create ${{ steps.tag.outputs.tagname }} \
             --title "${{ steps.tag.outputs.tagname }}" \
-            --target "${{ steps.prbranch.outputs.source_pr_branch }}" \
+            --target "${{ steps.prbranch.outputs.pr_commit }}" \
             --notes-file RELEASE_NOTES.md 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
