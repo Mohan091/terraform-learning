@@ -121,7 +121,8 @@ jobs:
       - name: Create GitHub Release
         run: |
           gh release create ${{ steps.tag.outputs.tagname }} \
-            --title "Release ${{ steps.tag.outputs.tagname }}" \
+            --title "${{ steps.tag.outputs.tagname }}" \
             --notes-file RELEASE_NOTES.md
+            --target ${{ steps.prbranch.outputs.source_pr_branch }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
