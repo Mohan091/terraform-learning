@@ -72,8 +72,23 @@ jobs:
           echo "## What's Changed" > RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
 
-          # Collect commits between previous tag and PR commit
-          git log $PREV..$SHA --pretty=format:"- %s by %an" >> RELEASE_NOTES.md
+          # Fetch merged PRs between PREV and SHA
+          gh api repos/${{ github.repository }}/compare/$PREV...$SHA \
+            --jq '.commits[].sha' | while read commit; do
+              # Try to find if commit belongs to a PR
+              pr=$(gh pr list --search $commit --json number,title,author --jq '.[0]')
+              if [ -n "$pr" ]; then
+                title=$(echo $pr | jq -r .title)
+                number=$(echo $pr | jq -r .number)
+                author=$(echo $pr | jq -r .author.login)
+                echo "- $title by @$author in #$number" >> RELEASE_NOTES.md
+              fi
+            done
+
+          # Fallback if nothing found
+          if ! grep -q "^- " RELEASE_NOTES.md; then
+            echo "- No PRs merged since $PREV" >> RELEASE_NOTES.md
+          fi
 
           echo "" >> RELEASE_NOTES.md
           echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV...$NEW" >> RELEASE_NOTES.md
