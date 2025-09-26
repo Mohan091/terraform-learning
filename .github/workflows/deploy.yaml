@@ -122,7 +122,7 @@ jobs:
         run: |
           gh release create ${{ steps.tag.outputs.tagname }} \
             --title "${{ steps.tag.outputs.tagname }}" \
-            --notes-file RELEASE_NOTES.md
-            --target ${{ steps.prbranch.outputs.source_pr_branch }}
+            --target "${{ steps.prbranch.outputs.source_pr_branch }}" \
+            --notes-file RELEASE_NOTES.md 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
