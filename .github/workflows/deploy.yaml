@@ -91,12 +91,15 @@ jobs:
           echo "Final release notes:" && cat RELEASE_NOTES.md
 
       # 7️⃣ Create GitHub Release (auto-creates tag)
-      - name: Create GitHub Release
-        run: |
-          gh release create ${{ steps.tag.outputs.tagname }} \
-            --title "${{ steps.tag.outputs.tagname }}" \
-            --target "${{ steps.prbranch.outputs.pr_commit }}" \
-            --notes-file RELEASE_NOTES.md \
-            -R ${{ github.repository }}
+      - name: Create GitHub Release via Octokit
+        uses: octokit/request-action@v2.x
+        with:
+          route: POST /repos/${{ github.repository }}/releases
+          tag_name: ${{ steps.tag.outputs.tagname }}
+          target_commitish: ${{ steps.prbranch.outputs.pr_commit }}
+          name: ${{ steps.tag.outputs.tagname }}
+          body: ${{ steps.release_notes.outputs.body }}
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
