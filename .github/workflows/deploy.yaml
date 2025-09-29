@@ -54,15 +54,13 @@ jobs:
       - name: Get latest release tag
         id: prev_release
         run: |
-          PREV_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          PREV_TAG=$(git tag --sort=-creatordate | head -n1)
           if [ -z "$PREV_TAG" ]; then
-            echo "No previous release found, using first commit as base"
-            PREV_TAG=$(git rev-list --max-parents=0 HEAD)   # first commit hash
+            PREV_TAG=$(git rev-list --max-parents=0 HEAD)  # first commit
           fi
           echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # 6️⃣ Generate release notes from merge commits
       - name: Generate Release Notes
         run: |
           PREV=${{ steps.prev_release.outputs.prev_tag }}
@@ -72,20 +70,17 @@ jobs:
           echo "## What's Changed" > RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
 
-          # Fetch merged PRs between PREV and SHA
-          gh api repos/${{ github.repository }}/compare/$PREV...$SHA \
-            --jq '.commits[].sha' | while read commit; do
-              # Try to find if commit belongs to a PR
-              pr=$(gh pr list --search $commit --json number,title,author --jq '.[0]')
-              if [ -n "$pr" ]; then
-                title=$(echo $pr | jq -r .title)
-                number=$(echo $pr | jq -r .number)
-                author=$(echo $pr | jq -r .author.login)
-                echo "- $title by @$author in #$number" >> RELEASE_NOTES.md
-              fi
-            done
+          # Get merge commits between PREV and SHA with author
+          git log $PREV..$SHA --merges --pretty=format:"%s|%an" | while read line; do
+            if [[ "$line" =~ Merge\ pull\ request\ \#([0-9]+)\ (.*)\|(.*) ]]; then
+              PR_NUMBER=${BASH_REMATCH[1]}
+              PR_TITLE=${BASH_REMATCH[2]}
+              PR_AUTHOR=${BASH_REMATCH[3]}
+              echo "- $PR_TITLE by @$PR_AUTHOR in #$PR_NUMBER" >> RELEASE_NOTES.md
+            fi
+          done
 
-          # Fallback if nothing found
+          # Fallback if no PRs found
           if ! grep -q "^- " RELEASE_NOTES.md; then
             echo "- No PRs merged since $PREV" >> RELEASE_NOTES.md
           fi
@@ -94,14 +89,14 @@ jobs:
           echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV...$NEW" >> RELEASE_NOTES.md
 
           echo "Final release notes:" && cat RELEASE_NOTES.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create GitHub Release (auto-creates tag)
+      # 7️⃣ Create GitHub Release (auto-creates tag)
+      - name: Create GitHub Release
         run: |
           gh release create ${{ steps.tag.outputs.tagname }} \
             --title "${{ steps.tag.outputs.tagname }}" \
             --target "${{ steps.prbranch.outputs.pr_commit }}" \
-            --notes-file RELEASE_NOTES.md 
+            --notes-file RELEASE_NOTES.md \
+            -R ${{ github.repository }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
