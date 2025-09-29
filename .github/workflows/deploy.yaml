@@ -90,6 +90,14 @@ jobs:
 
           echo "Final release notes:" && cat RELEASE_NOTES.md
 
+      - name: Set release notes output
+        id: release_notes
+        run: |
+          body=$(cat RELEASE_NOTES.md)
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$body" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT    
+
       # 7️⃣ Create GitHub Release (auto-creates tag)
       - name: Create GitHub Release via Octokit
         uses: octokit/request-action@v2.x
